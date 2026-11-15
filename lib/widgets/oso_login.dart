@@ -64,7 +64,7 @@ class _OsoDibujado extends StatelessWidget {
 
   const _OsoDibujado({required this.tapandoOjos, required this.mirada});
 
-  Widget _ojo(double lado) {
+  Widget _ojo() {
     return Container(
       width: 26,
       height: 26,
@@ -125,12 +125,12 @@ class _OsoDibujado extends StatelessWidget {
                 Positioned(
                   top: 42,
                   left: 28,
-                  child: _ojo(-1),
+                  child: _ojo(),
                 ),
                 Positioned(
                   top: 42,
                   right: 28,
-                  child: _ojo(1),
+                  child: _ojo(),
                 ),
                 // Hocico
                 Positioned(
