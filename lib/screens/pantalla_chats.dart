@@ -45,10 +45,6 @@ class _PantallaChatsState extends State<PantallaChats> {
         .toList();
   }
 
-  int get _totalSinLeer {
-    return _chats.fold(0, (total, c) => total + c.sinLeer);
-  }
-
   // Abre la sala de chat y al regresar marca sus mensajes como leídos
   Future<void> _abrirChat(Chat chat) async {
     await Navigator.push(
