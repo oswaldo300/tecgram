@@ -1,0 +1,26 @@
+name: tecgram
+description: "TecGram — clon de Telegram hecho en Flutter. Proyecto final escolar del Instituto Tecnológico de Mérida."
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.4.0
+  flutter: ">=3.22.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  # Animación del oso en el login (Rive). Si no se tiene el archivo .riv,
+  # la app usa el oso dibujado con widgets, ver lib/widgets/oso_login.dart
+  rive: ^0.13.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/rive/
+    - assets/images/
