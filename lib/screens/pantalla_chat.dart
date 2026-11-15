@@ -34,8 +34,9 @@ class _PantallaChatState extends State<PantallaChat> {
   @override
   void initState() {
     super.initState();
-    // Copia de los mensajes: así se pueden agregar sin tocar los datos base
-    _mensajes = List.of(widget.chat.mensajes);
+    // Se usa la lista original del chat (no una copia): así los mensajes
+    // que se mandan aquí aparecen también en la bandeja al regresar.
+    _mensajes = widget.chat.mensajes;
     // Baja hasta el último mensaje cuando se abre la sala
     WidgetsBinding.instance.addPostFrameCallback((_) => _bajarAlFinal());
   }
