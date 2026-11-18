@@ -13,6 +13,8 @@ dependencies:
   # Animación del oso en el login (Rive). Si no se tiene el archivo .riv,
   # la app usa el oso dibujado con widgets, ver lib/widgets/oso_login.dart
   rive: ^0.13.0
+  flutter_chat_core: ^2.0.0
+  flutter_chat_ui: ^2.0.0
 
 dev_dependencies:
   flutter_test:
