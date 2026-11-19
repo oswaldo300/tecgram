@@ -1,21 +1,22 @@
-// Validaciones del login. Devuelven null si todo está bien,
+// Validaciones del login y el registro. Devuelven null si todo está bien,
 // o el mensaje de error que se muestra bajo el campo.
 class Validadores {
   Validadores._();
 
-  // Teléfono mexicano: 10 dígitos, solo números
-  static String? telefono(String? valor) {
+  static final _correoRegex = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
+  // Correo: algo antes y después de la @, y un punto en el dominio
+  static String? correo(String? valor) {
     if (valor == null || valor.trim().isEmpty) {
-      return 'Escribe tu número de teléfono';
+      return 'Escribe tu correo electrónico';
     }
-    final limpio = valor.replaceAll(RegExp(r'\D'), '');
-    if (limpio.length != 10) {
-      return 'El teléfono debe tener 10 dígitos';
+    if (!_correoRegex.hasMatch(valor.trim())) {
+      return 'Escribe un correo válido';
     }
     return null;
   }
 
-  // Nombre: al menos 2 letras, solo letras y espacios
+  // Nombre: al menos 2 caracteres
   static String? nombre(String? valor) {
     if (valor == null || valor.trim().isEmpty) {
       return 'Escribe tu nombre';
@@ -26,13 +27,13 @@ class Validadores {
     return null;
   }
 
-  // Clave del demo: mínimo 4 caracteres
+  // Contraseña: mínimo 6 caracteres (lo que pide Firebase)
   static String? clave(String? valor) {
     if (valor == null || valor.isEmpty) {
-      return 'Escribe tu clave';
+      return 'Escribe tu contraseña';
     }
-    if (valor.length < 4) {
-      return 'La clave debe tener al menos 4 caracteres';
+    if (valor.length < 6) {
+      return 'La contraseña debe tener al menos 6 caracteres';
     }
     return null;
   }

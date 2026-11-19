@@ -1,13 +1,15 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:tecgram/models/usuario.dart';
-import 'package:tecgram/screens/pantalla_chats.dart';
-import 'package:tecgram/screens/pantalla_verificacion.dart';
+import 'package:tecgram/main.dart';
+import 'package:tecgram/screens/pantalla_registro.dart';
 import 'package:tecgram/theme/app_theme.dart';
 import 'package:tecgram/utils/validadores.dart';
 import 'package:tecgram/widgets/logo_tecgram.dart';
 import 'package:tecgram/widgets/oso_login.dart';
 
+// Login con correo y contraseña, como en login_osito_rive.
+// El oso mira el campo activo, sigue lo que se escribe en el correo,
+// se tapa los ojos al escribir la contraseña y reacciona al resultado.
 class PantallaLogin extends StatefulWidget {
   const PantallaLogin({super.key});
 
@@ -17,155 +19,216 @@ class PantallaLogin extends StatefulWidget {
 
 class _PantallaLoginState extends State<PantallaLogin> {
   final _formKey = GlobalKey<FormState>();
-  final _telefonoController = TextEditingController();
-  final _nombreController = TextEditingController();
+  final _correoController = TextEditingController();
+  final _claveController = TextEditingController();
 
-  final _focoTelefono = FocusNode();
-  final _focoNombre = FocusNode();
+  final _focoCorreo = FocusNode();
+  final _focoClave = FocusNode();
 
   bool _isLoading = false;
-  bool _navegando = false;
-  double _mirada = 0;
+  bool _ocultarClave = true;
+  bool _tapandoOjos = false;
+  bool _mirandoCampo = false;
+  double _mirada = -1;
+  int _exitos = 0;
+  int _fallos = 0;
 
   @override
   void initState() {
     super.initState();
 
-    _focoTelefono.addListener(() {
-      if (_focoTelefono.hasFocus) {
-        setState(() => _mirada = -1);
-      }
+    _focoCorreo.addListener(() {
+      if (!mounted) return;
+      setState(() {
+        _mirandoCampo = _focoCorreo.hasFocus;
+        if (_focoCorreo.hasFocus) _tapandoOjos = false;
+      });
     });
 
-    _focoNombre.addListener(() {
-      if (_focoNombre.hasFocus) {
-        setState(() => _mirada = 0);
-      }
+    _focoClave.addListener(() {
+      if (!mounted) return;
+      setState(() {
+        _mirandoCampo = false;
+        _tapandoOjos = _focoClave.hasFocus && _ocultarClave;
+      });
     });
   }
 
   @override
   void dispose() {
-    _telefonoController.dispose();
-    _nombreController.dispose();
-    _focoTelefono.dispose();
-    _focoNombre.dispose();
+    _correoController.dispose();
+    _claveController.dispose();
+    _focoCorreo.dispose();
+    _focoClave.dispose();
     super.dispose();
   }
 
   Future<void> _iniciarSesion() async {
-    if (!_formKey.currentState!.validate()) return;
-
+    FocusScope.of(context).unfocus();
     setState(() {
-      _isLoading = true;
-      _navegando = false;
+      _mirandoCampo = false;
+      _tapandoOjos = false;
     });
 
-    FocusScope.of(context).unfocus();
+    if (!_formKey.currentState!.validate()) {
+      setState(() => _fallos++);
+      return;
+    }
 
-    final telefono = _telefonoController.text.replaceAll(
-      RegExp(r'\D'),
-      '',
-    );
-
-    final nombre = _nombreController.text.trim();
-    final telefonoCompleto = '+52$telefono';
+    setState(() => _isLoading = true);
+    reproduciendoExitoLogin.value = true;
 
     try {
-      await FirebaseAuth.instance.setLanguageCode('es');
-
-      await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: telefonoCompleto,
-        timeout: const Duration(seconds: 60),
-
-        verificationCompleted: (PhoneAuthCredential credential) async {
-          if (_navegando || !mounted) return;
-
-          _navegando = true;
-
-          try {
-            final resultado = await FirebaseAuth.instance
-                .signInWithCredential(credential);
-
-            await resultado.user?.updateDisplayName(nombre);
-
-            if (!mounted) return;
-
-            final usuario = Usuario.desdeNombre(nombre, telefono);
-
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => PantallaChats(usuario: usuario),
-              ),
-            );
-          } on FirebaseAuthException catch (e) {
-            _mostrarError(e.message ?? 'No se pudo iniciar sesión.');
-          }
-        },
-
-        verificationFailed: (FirebaseAuthException e) {
-          if (!mounted) return;
-
-          setState(() => _isLoading = false);
-
-          String mensaje;
-
-          switch (e.code) {
-            case 'invalid-phone-number':
-              mensaje = 'El número de teléfono no es válido.';
-              break;
-            case 'too-many-requests':
-              mensaje = 'Demasiados intentos. Inténtalo más tarde.';
-              break;
-            case 'quota-exceeded':
-              mensaje = 'Se alcanzÃ³ el lÃ­mite de SMS de Firebase.';
-              break;
-            default:
-              mensaje = e.message ?? 'No se pudo enviar el código.';
-          }
-
-          _mostrarError(mensaje);
-        },
-
-        codeSent: (String verificationId, int? resendToken) {
-          if (!mounted || _navegando) return;
-
-          _navegando = true;
-          setState(() => _isLoading = false);
-
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => PantallaVerificacion(
-                verificationId: verificationId,
-                telefono: telefono,
-                nombre: nombre,
-              ),
-            ),
-          );
-        },
-
-        codeAutoRetrievalTimeout: (String verificationId) {
-          // El usuario todavía puede introducir el código manualmente.
-        },
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _correoController.text.trim(),
+        password: _claveController.text.trim(),
       );
+
+      if (!mounted) return;
+      setState(() => _exitos++);
+      _mostrarMensaje('¡Bienvenido! Iniciando sesión...', esError: false);
+
+      await Future.delayed(const Duration(milliseconds: 1600));
+      reproduciendoExitoLogin.value = false;
     } on FirebaseAuthException catch (e) {
+      reproduciendoExitoLogin.value = false;
       if (!mounted) return;
-
-      setState(() => _isLoading = false);
-      _mostrarError(e.message ?? 'Ocurrió un error de autenticaciÃ³n.');
-    } catch (e) {
+      setState(() => _fallos++);
+      _mostrarMensaje(_mensajeError(e.code), esError: true);
+    } catch (_) {
+      reproduciendoExitoLogin.value = false;
       if (!mounted) return;
-
-      setState(() => _isLoading = false);
-      _mostrarError('Ocurrió un error inesperado: $e');
+      setState(() => _fallos++);
+      _mostrarMensaje('Ocurrió un error inesperado al conectar', esError: true);
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _mostrarError(String mensaje) {
+  Future<void> _recuperarClave() async {
+    final correoController = TextEditingController(
+      text: _correoController.text.trim(),
+    );
+
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _mirandoCampo = false;
+      _tapandoOjos = false;
+    });
+
+    final correo = await showDialog<String>(
+      context: context,
+      builder: (contextDialogo) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: const Text('Recuperar contraseña'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Escribe tu correo y te enviaremos un enlace para restablecer tu contraseña.',
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: correoController,
+                keyboardType: TextInputType.emailAddress,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Correo electrónico',
+                  prefixIcon: const Icon(Icons.email_outlined),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(contextDialogo).pop(),
+              child: const Text('Cancelar'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.azulTelegram,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () {
+                Navigator.of(contextDialogo).pop(correoController.text.trim());
+              },
+              child: const Text('Enviar enlace'),
+            ),
+          ],
+        );
+      },
+    );
+
+    correoController.dispose();
+
+    if (correo == null || !mounted) return;
+
+    final error = Validadores.correo(correo);
+    if (error != null) {
+      setState(() => _fallos++);
+      _mostrarMensaje(error, esError: true);
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: correo);
+      if (!mounted) return;
+      setState(() => _exitos++);
+      _mostrarMensaje(
+        'Correo de recuperación enviado a $correo. Revisa tu bandeja o spam.',
+        esError: false,
+      );
+    } on FirebaseAuthException catch (e) {
+      if (!mounted) return;
+      setState(() => _fallos++);
+      _mostrarMensaje(_mensajeError(e.code), esError: true);
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _fallos++);
+      _mostrarMensaje(
+        'No se pudo enviar el correo de recuperación',
+        esError: true,
+      );
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  String _mensajeError(String codigo) {
+    switch (codigo) {
+      case 'invalid-email':
+        return 'El formato del correo no es válido';
+      case 'user-not-found':
+      case 'wrong-password':
+      case 'invalid-credential':
+        return 'Correo o contraseña incorrectos';
+      case 'too-many-requests':
+        return 'Demasiados intentos. Espera un momento';
+      case 'user-disabled':
+        return 'Esta cuenta está deshabilitada';
+      case 'network-request-failed':
+        return 'Sin conexión. Revisa tu internet e inténtalo de nuevo';
+      default:
+        return 'Error de autenticación ($codigo)';
+    }
+  }
+
+  void _mostrarMensaje(String texto, {required bool esError}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(mensaje)),
+      SnackBar(
+        content: Text(texto),
+        backgroundColor: esError ? Colors.red.shade700 : Colors.green.shade700,
+      ),
     );
   }
 
@@ -174,10 +237,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 28,
-            vertical: 16,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
           child: Form(
             key: _formKey,
             child: Column(
@@ -196,50 +256,77 @@ class _PantallaLoginState extends State<PantallaLogin> {
                 const Text(
                   'Mensajería del Instituto Tecnológico de Mérida',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppTheme.textoGris,
-                    fontSize: 13,
-                  ),
+                  style: TextStyle(color: AppTheme.textoGris, fontSize: 13),
                 ),
                 const SizedBox(height: 12),
 
                 OsoLogin(
-                  tapandoOjos: false,
+                  tapandoOjos: _tapandoOjos,
                   mirada: _mirada,
+                  mirandoCampo: _mirandoCampo,
+                  exitos: _exitos,
+                  fallos: _fallos,
                 ),
 
                 const SizedBox(height: 20),
 
                 TextFormField(
-                  controller: _telefonoController,
-                  focusNode: _focoTelefono,
-                  keyboardType: TextInputType.phone,
+                  controller: _correoController,
+                  focusNode: _focoCorreo,
+                  enabled: !_isLoading,
+                  keyboardType: TextInputType.emailAddress,
+                  onChanged: (texto) {
+                    final vista = (texto.length * 2.0).clamp(0, 100);
+                    setState(() => _mirada = vista / 50 - 1);
+                  },
                   decoration: const InputDecoration(
-                    labelText: 'NÃºmero de teléfono',
-                    hintText: '9991234567',
-                    prefixText: '+52 ',
-                    prefixIcon: Icon(Icons.phone_android),
+                    labelText: 'Correo electrónico',
+                    hintText: 'ana@ejemplo.com',
+                    prefixIcon: Icon(Icons.email),
                     border: OutlineInputBorder(),
                   ),
-                  validator: Validadores.telefono,
+                  validator: Validadores.correo,
                 ),
 
                 const SizedBox(height: 14),
 
                 TextFormField(
-                  controller: _nombreController,
-                  focusNode: _focoNombre,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Tu nombre',
-                    hintText: 'Ana Pérez',
-                    prefixIcon: Icon(Icons.person),
-                    border: OutlineInputBorder(),
+                  controller: _claveController,
+                  focusNode: _focoClave,
+                  enabled: !_isLoading,
+                  obscureText: _ocultarClave,
+                  decoration: InputDecoration(
+                    labelText: 'Contraseña',
+                    prefixIcon: const Icon(Icons.lock),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _ocultarClave ? Icons.visibility_off : Icons.visibility,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _ocultarClave = !_ocultarClave;
+                          if (_focoClave.hasFocus) {
+                            _tapandoOjos = _ocultarClave;
+                          }
+                        });
+                      },
+                    ),
+                    border: const OutlineInputBorder(),
                   ),
-                  validator: Validadores.nombre,
+                  validator: Validadores.clave,
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 8),
+
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: _isLoading ? null : _recuperarClave,
+                    child: const Text('¿Olvidaste tu contraseña?'),
+                  ),
+                ),
+
+                const SizedBox(height: 8),
 
                 SizedBox(
                   width: double.infinity,
@@ -259,23 +346,32 @@ class _PantallaLoginState extends State<PantallaLogin> {
                               strokeWidth: 2.5,
                             ),
                           )
-                        : const Text(
-                            'ENVIAR CÓDIGO SMS',
-                            style: TextStyle(fontSize: 16),
-                          ),
+                        : const Text('ENTRAR', style: TextStyle(fontSize: 16)),
                   ),
                 ),
 
-                const SizedBox(height: 12),
+                const SizedBox(height: 20),
 
-                const Text(
-                  'Recibirás un SMS para verificar tu número. '
-                  'Pueden aplicarse tarifas de mensajes.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textoGris,
-                  ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('¿No tienes cuenta?'),
+                    TextButton(
+                      onPressed: _isLoading
+                          ? null
+                          : () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => const PantallaRegistro(),
+                                ),
+                              );
+                            },
+                      child: const Text(
+                        'Crear cuenta',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),

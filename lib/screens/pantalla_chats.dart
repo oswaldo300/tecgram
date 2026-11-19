@@ -177,7 +177,9 @@ class _PantallaChatsState extends State<PantallaChats> {
                     ),
                   ),
                   Text(
-                    '+52 ${widget.usuario.telefono}',
+                    widget.usuario.correo.isNotEmpty
+                        ? widget.usuario.correo
+                        : '+52 ${widget.usuario.telefono}',
                     style: const TextStyle(color: Colors.white70),
                   ),
                 ],
