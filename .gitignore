@@ -34,3 +34,7 @@ local.properties
 *.keystore
 google-services.json
 GoogleService-Info.plist
+
+# Documentación generada para agentes de IA (no va al repo)
+.agents/
+skills-lock.json
