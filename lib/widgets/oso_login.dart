@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:rive/rive.dart';
 
 // Oso animado del login, estilo Telegram.
 // Carga el archivo Rive (assets/rive/oso_login.riv) y maneja su state
 // machine: mira al campo activo, se tapa los ojos al escribir algo
 // secreto y reacciona cuando el login sale bien o mal.
-// Si el archivo no está o no se puede cargar (por ejemplo, en flutter test
-// no existe la librería nativa de Rive), muestra el oso dibujado con widgets.
+// Si el archivo no está o no se puede cargar, muestra el oso dibujado.
 class OsoLogin extends StatefulWidget {
   // true = el usuario está escribiendo algo secreto (el oso se tapa los ojos)
   final bool tapandoOjos;
@@ -47,11 +47,16 @@ class _OsoLoginState extends State<OsoLogin> {
     _cargarOso();
   }
 
-  // Carga el .riv; si falla (no hay archivo o no hay librería nativa),
-  // se queda el oso dibujado y no se rompe nada.
+  // Carga el .riv con RiveFile.import (no con RiveFile.asset): import solo
+  // lee el archivo y no inicializa el motor de texto de Rive. Ese motor
+  // necesita la librería nativa (rive_common_plugin.dll), que no existe
+  // en flutter test sobre Windows, y su error no llega a ningún try/catch
+  // (rive_common lo deja sin manejar y el test se cae). El oso no tiene
+  // texto, así que no necesita ese motor para animarse.
   Future<void> _cargarOso() async {
     try {
-      final archivo = await RiveFile.asset('assets/rive/oso_login.riv');
+      final bytes = await rootBundle.load('assets/rive/oso_login.riv');
+      final archivo = RiveFile.import(bytes);
       if (mounted) setState(() => _archivoRive = archivo);
     } catch (_) {
       // Sin oso Rive, no pasa nada: se dibuja el oso con widgets.
