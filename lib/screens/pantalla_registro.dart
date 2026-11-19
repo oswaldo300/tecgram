@@ -1,12 +1,15 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:tecgram/main.dart';
+import 'package:tecgram/models/usuario.dart';
 import 'package:tecgram/theme/app_theme.dart';
 import 'package:tecgram/utils/validadores.dart';
 import 'package:tecgram/widgets/oso_login.dart';
 
 // Crear cuenta con correo y contraseña, como en login_osito_rive.
-// El nombre se guarda como nombre para mostrar en Firebase.
+// El nombre se guarda como nombre para mostrar en Firebase y el perfil
+// se guarda en Firestore (usuarios/{uid}), como hacía Diego.
 class PantallaRegistro extends StatefulWidget {
   const PantallaRegistro({super.key});
 
@@ -109,6 +112,15 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
 
       await credencial.user?.updateDisplayName(_nombreController.text.trim());
 
+      // Guardar el perfil en Firestore (código de Diego, adaptado al
+      // registro por correo): el usuario queda en usuarios/{uid} para la
+      // lista de chats en tiempo real de la fase 2.
+      await _guardarPerfilEnFirestore(
+        credencial.user,
+        _nombreController.text.trim(),
+        _correoController.text.trim(),
+      );
+
       if (!mounted) return;
       setState(() => _exitos++);
       _mostrarMensaje('¡Cuenta creada! Entrando...', esError: false);
@@ -129,6 +141,38 @@ class _PantallaRegistroState extends State<PantallaRegistro> {
       _mostrarMensaje('Error inesperado al crear la cuenta', esError: true);
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  // Guarda el perfil del usuario en Firestore, como hacía Diego al
+  // verificar el SMS. Si el documento ya existe no se sobrescribe.
+  // Si Firestore falla (sin red, reglas), la cuenta ya está creada y
+  // el login sigue funcionando; el perfil se puede crear al entrar.
+  Future<void> _guardarPerfilEnFirestore(
+    User? usuarioFirebase,
+    String nombre,
+    String correo,
+  ) async {
+    if (usuarioFirebase == null) return;
+    try {
+      final usuario = Usuario.desdeNombre(nombre, '', correo: correo);
+      final referencia = FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(usuarioFirebase.uid);
+      final documento = await referencia.get();
+      if (!documento.exists) {
+        await referencia.set({
+          'uid': usuarioFirebase.uid,
+          'nombre': usuario.nombre,
+          'correo': usuario.correo,
+          'telefono': usuario.telefono,
+          'iniciales': usuario.iniciales,
+          'fechaRegistro': FieldValue.serverTimestamp(),
+          'activo': true,
+        });
+      }
+    } catch (e) {
+      debugPrint('TecGram: no se pudo guardar el perfil en Firestore: $e');
     }
   }
 
