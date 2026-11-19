@@ -16,13 +16,18 @@ class Validadores {
     return null;
   }
 
-  // Nombre: al menos 2 caracteres
+  // Nombre: al menos 2 letras, solo letras y espacios (con acentos y ñ)
   static String? nombre(String? valor) {
     if (valor == null || valor.trim().isEmpty) {
       return 'Escribe tu nombre';
     }
-    if (valor.trim().length < 2) {
+    final nombre = valor.trim();
+    if (nombre.length < 2) {
       return 'El nombre es muy corto';
+    }
+    final soloLetras = RegExp(r"^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\s]+$");
+    if (!soloLetras.hasMatch(nombre)) {
+      return 'El nombre solo puede tener letras';
     }
     return null;
   }
