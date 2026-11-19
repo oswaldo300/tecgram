@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:tecgram/models/usuario.dart';
@@ -47,14 +48,61 @@ class _PantallaVerificacionState extends State<PantallaVerificacion> {
       final resultado =
           await FirebaseAuth.instance.signInWithCredential(credencial);
 
-      await resultado.user?.updateDisplayName(widget.nombre);
+      final usuarioFirebase = resultado.user;
+
+      if (usuarioFirebase == null) {
+        throw Exception('No se pudo obtener el usuario autenticado.');
+      }
+
+      // Referencia al documento del usuario mediante su UID.
+      final referencia = FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(usuarioFirebase.uid);
+
+      // Consultar si el usuario ya está registrado.
+      final documento = await referencia.get();
+
+      late Usuario usuario;
+
+      if (!documento.exists) {
+        // Usuario nuevo: registrar sus datos.
+        final nuevoUsuario = Usuario.desdeNombre(
+          widget.nombre,
+          usuarioFirebase.phoneNumber ?? '+52${widget.telefono}',
+        );
+
+        await referencia.set({
+          'uid': usuarioFirebase.uid,
+          'nombre': nuevoUsuario.nombre,
+          'telefono': nuevoUsuario.telefono,
+          'iniciales': nuevoUsuario.iniciales,
+          'fechaRegistro': FieldValue.serverTimestamp(),
+          'activo': true,
+        });
+
+        await usuarioFirebase.updateDisplayName(nuevoUsuario.nombre);
+
+        usuario = nuevoUsuario;
+      } else {
+        // Usuario existente: recuperar sus datos.
+        final datos = documento.data()!;
+
+        final nombreGuardado = datos['nombre'] ?? widget.nombre;
+
+        usuario = Usuario(
+          nombre: nombreGuardado,
+          telefono: datos['telefono'] ??
+              usuarioFirebase.phoneNumber ??
+              '+52${widget.telefono}',
+          iniciales: datos['iniciales'] ??
+              Usuario.desdeNombre(
+                nombreGuardado,
+                usuarioFirebase.phoneNumber ?? widget.telefono,
+              ).iniciales,
+        );
+      }
 
       if (!mounted) return;
-
-      final usuario = Usuario.desdeNombre(
-        widget.nombre,
-        widget.telefono,
-      );
 
       Navigator.pushAndRemoveUntil(
         context,

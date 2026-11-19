@@ -1,4 +1,3 @@
-
 {
   "flutter": {
     "platforms": {
@@ -21,12 +20,23 @@
   },
   "emulators": {
     "auth": {
+      "host": "0.0.0.0",
       "port": 9099
     },
     "ui": {
       "enabled": true,
       "port": 4000
     },
-    "singleProjectMode": true
+    "singleProjectMode": true,
+    "firestore": {
+      "host": "0.0.0.0",
+      "port": 8080
+    }
+  },
+  "firestore": {
+    "database": "(default)",
+    "location": "nam5",
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
   }
 }

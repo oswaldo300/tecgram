@@ -1,5 +1,5 @@
-
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
@@ -19,6 +19,11 @@ Future<void> main() async {
   await FirebaseAuth.instance.useAuthEmulator(
     '10.0.2.2',
     9099,
+  );
+
+  FirebaseFirestore.instance.useFirestoreEmulator(
+    '10.0.2.2',
+    8080,
   );
 
   runApp(const TecGramApp());
