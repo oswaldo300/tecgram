@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:rive/rive.dart';
 
 // Oso animado del login, estilo Telegram.
 // Carga el archivo Rive (assets/rive/oso_login.riv) y maneja su state
 // machine: mira al campo activo, se tapa los ojos al escribir algo
 // secreto y reacciona cuando el login sale bien o mal.
-// Si el archivo no está, muestra el oso dibujado con widgets.
+// Si el archivo no está o no se puede cargar (por ejemplo, en flutter test
+// no existe la librería nativa de Rive), muestra el oso dibujado con widgets.
 class OsoLogin extends StatefulWidget {
   // true = el usuario está escribiendo algo secreto (el oso se tapa los ojos)
   final bool tapandoOjos;
@@ -33,7 +33,7 @@ class OsoLogin extends StatefulWidget {
 }
 
 class _OsoLoginState extends State<OsoLogin> {
-  bool _tieneRive = false;
+  RiveFile? _archivoRive;
 
   SMIBool? _isChecking;
   SMIBool? _isHandsUp;
@@ -44,16 +44,17 @@ class _OsoLoginState extends State<OsoLogin> {
   @override
   void initState() {
     super.initState();
-    _buscarArchivoRive();
+    _cargarOso();
   }
 
-  // Checa si el .riv está en assets; si no, se usa el oso dibujado.
-  Future<void> _buscarArchivoRive() async {
+  // Carga el .riv; si falla (no hay archivo o no hay librería nativa),
+  // se queda el oso dibujado y no se rompe nada.
+  Future<void> _cargarOso() async {
     try {
-      await rootBundle.load('assets/rive/oso_login.riv');
-      if (mounted) setState(() => _tieneRive = true);
+      final archivo = await RiveFile.asset('assets/rive/oso_login.riv');
+      if (mounted) setState(() => _archivoRive = archivo);
     } catch (_) {
-      // No hay archivo Rive, no pasa nada: se dibuja el oso con widgets.
+      // Sin oso Rive, no pasa nada: se dibuja el oso con widgets.
     }
   }
 
@@ -97,11 +98,12 @@ class _OsoLoginState extends State<OsoLogin> {
 
   @override
   Widget build(BuildContext context) {
-    if (_tieneRive) {
+    final archivo = _archivoRive;
+    if (archivo != null) {
       return SizedBox(
         height: 180,
-        child: RiveAnimation.asset(
-          'assets/rive/oso_login.riv',
+        child: RiveAnimation.direct(
+          archivo,
           fit: BoxFit.contain,
           onInit: _onRiveInit,
         ),
