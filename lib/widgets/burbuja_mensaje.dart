@@ -35,7 +35,8 @@ class BurbujaMensaje extends StatelessWidget {
             bottomRight: Radius.circular(esMio ? 4 : 14),
           ),
           boxShadow: const [
-            BoxShadow(color: Colors.black12, blurRadius: 1, offset: Offset(0, 1)),
+            BoxShadow(
+                color: Colors.black12, blurRadius: 1, offset: Offset(0, 1)),
           ],
         ),
         child: Row(
@@ -54,7 +55,8 @@ class BurbujaMensaje extends StatelessWidget {
               children: [
                 Text(
                   _hora,
-                  style: const TextStyle(fontSize: 11, color: AppTheme.textoGris),
+                  style:
+                      const TextStyle(fontSize: 11, color: AppTheme.textoGris),
                 ),
                 if (esMio) ...[
                   const SizedBox(width: 3),

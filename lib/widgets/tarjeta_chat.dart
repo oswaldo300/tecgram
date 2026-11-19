@@ -39,7 +39,8 @@ class TarjetaChat extends StatelessWidget {
             chat.horaCorta,
             style: TextStyle(
               fontSize: 12,
-              color: chat.sinLeer > 0 ? AppTheme.azulTelegram : AppTheme.textoGris,
+              color:
+                  chat.sinLeer > 0 ? AppTheme.azulTelegram : AppTheme.textoGris,
             ),
           ),
         ],
@@ -49,7 +50,8 @@ class TarjetaChat extends StatelessWidget {
           if (ultimo != null && ultimo.esMio)
             const Padding(
               padding: EdgeInsets.only(right: 3),
-              child: Icon(Icons.done_all, size: 16, color: AppTheme.azulTelegram),
+              child:
+                  Icon(Icons.done_all, size: 16, color: AppTheme.azulTelegram),
             ),
           Expanded(
             child: Text(

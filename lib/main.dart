@@ -1,13 +1,29 @@
+
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
+import 'package:tecgram/firebase_options.dart';
 import 'package:tecgram/screens/pantalla_login.dart';
 import 'package:tecgram/theme/app_theme.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  // Inicializar Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // Conectar Firebase Authentication al emulador local
+  await FirebaseAuth.instance.useAuthEmulator(
+    '10.0.2.2',
+    9099,
+  );
+
   runApp(const TecGramApp());
 }
 
-// Raíz de la app. Aquí solo se configura el tema y la pantalla inicial,
-// toda la lógica vive en sus propias carpetas (screens, models, data).
 class TecGramApp extends StatelessWidget {
   const TecGramApp({super.key});
 

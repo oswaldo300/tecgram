@@ -77,8 +77,8 @@ class _PantallaChatState extends State<PantallaChat> {
     _timerRespuesta?.cancel();
     _timerRespuesta = Timer(const Duration(milliseconds: 1500), () {
       if (!mounted) return;
-      final respuesta =
-          DatosEjemplo.respuestas[_random.nextInt(DatosEjemplo.respuestas.length)];
+      final respuesta = DatosEjemplo
+          .respuestas[_random.nextInt(DatosEjemplo.respuestas.length)];
       setState(() {
         _escribiendo = false;
         _mensajes.add(
