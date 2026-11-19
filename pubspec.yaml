@@ -4,8 +4,8 @@ publish_to: 'none'
 version: 1.0.0+1
 
 environment:
-  sdk: ^3.4.0
-  flutter: ">=3.22.0"
+  sdk: ^3.12.0
+  flutter: ">=3.44.0"
 
 dependencies:
   flutter:
@@ -13,8 +13,6 @@ dependencies:
   # Animación del oso en el login (Rive). Si no se tiene el archivo .riv,
   # la app usa el oso dibujado con widgets, ver lib/widgets/oso_login.dart
   rive: ^0.13.0
-  flutter_chat_core: ^2.0.0
-  flutter_chat_ui: ^2.0.0
   firebase_core: ^5.2.0
   firebase_auth: ^7.1.0
   cloud_firestore: ^7.2.0

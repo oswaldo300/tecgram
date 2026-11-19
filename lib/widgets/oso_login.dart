@@ -3,56 +3,118 @@ import 'package:flutter/services.dart';
 import 'package:rive/rive.dart';
 
 // Oso animado del login, estilo Telegram.
-// Primero intenta cargar el archivo Rive (assets/rive/oso_login.riv).
-// Si el archivo no existe, muestra el oso dibujado con widgets:
-// los ojos siguen el campo activo y se tapa los ojos al escribir la clave.
+// Carga el archivo Rive (assets/rive/oso_login.riv) y maneja su state
+// machine: mira al campo activo, se tapa los ojos al escribir algo
+// secreto y reacciona cuando el login sale bien o mal.
+// Si el archivo no está o no se puede cargar, muestra el oso dibujado.
 class OsoLogin extends StatefulWidget {
-  // true = el usuario está escribiendo la clave (el oso se tapa los ojos)
+  // true = el usuario está escribiendo algo secreto (el oso se tapa los ojos)
   final bool tapandoOjos;
-  // -1 = mira a la izquierda (teléfono), 1 = a la derecha, 0 = al centro
+  // -1 = mira a la izquierda, 0 = al centro, 1 = a la derecha
   final double mirada;
+  // true = algún campo tiene el foco (el oso está atento)
+  final bool mirandoCampo;
+  // Cada vez que sube este número, el oso celebra (login correcto)
+  final int exitos;
+  // Cada vez que sube este número, el oso se lamenta (login fallido)
+  final int fallos;
 
-  const OsoLogin({super.key, this.tapandoOjos = false, this.mirada = 0});
+  const OsoLogin({
+    super.key,
+    this.tapandoOjos = false,
+    this.mirada = 0,
+    this.mirandoCampo = false,
+    this.exitos = 0,
+    this.fallos = 0,
+  });
 
   @override
   State<OsoLogin> createState() => _OsoLoginState();
 }
 
 class _OsoLoginState extends State<OsoLogin> {
-  bool _tieneRive = false;
+  RiveFile? _archivoRive;
+
+  SMIBool? _isChecking;
+  SMIBool? _isHandsUp;
+  SMINumber? _numLook;
+  SMITrigger? _trigSuccess;
+  SMITrigger? _trigFail;
 
   @override
   void initState() {
     super.initState();
-    _buscarArchivoRive();
+    _cargarOso();
   }
 
-  // Checa si el .riv está en assets; si no, se usa el oso dibujado.
-  Future<void> _buscarArchivoRive() async {
+  // Carga el .riv con RiveFile.import (no con RiveFile.asset): import solo
+  // lee el archivo y no inicializa el motor de texto de Rive. Ese motor
+  // necesita la librería nativa (rive_common_plugin.dll), que no existe
+  // en flutter test sobre Windows, y su error no llega a ningún try/catch
+  // (rive_common lo deja sin manejar y el test se cae). El oso no tiene
+  // texto, así que no necesita ese motor para animarse.
+  Future<void> _cargarOso() async {
     try {
-      await rootBundle.load('assets/rive/oso_login.riv');
-      if (mounted) setState(() => _tieneRive = true);
+      final bytes = await rootBundle.load('assets/rive/oso_login.riv');
+      final archivo = RiveFile.import(bytes);
+      if (mounted) setState(() => _archivoRive = archivo);
     } catch (_) {
-      // No hay archivo Rive, no pasa nada: se dibuja el oso con widgets.
+      // Sin oso Rive, no pasa nada: se dibuja el oso con widgets.
+    }
+  }
+
+  void _onRiveInit(Artboard artboard) {
+    final machineName = artboard.stateMachines.isNotEmpty
+        ? artboard.stateMachines.first.name
+        : 'Login Machine';
+    final controller = StateMachineController.fromArtboard(
+      artboard,
+      machineName,
+    );
+    if (controller != null) {
+      artboard.addController(controller);
+      _isChecking = controller.findInput<bool>('isChecking') as SMIBool?;
+      _isHandsUp = controller.findInput<bool>('isHandsUp') as SMIBool?;
+      _numLook = controller.findInput<double>('numLook') as SMINumber?;
+      _trigSuccess = controller.findInput<bool>('trigSuccess') as SMITrigger?;
+      _trigFail = controller.findInput<bool>('trigFail') as SMITrigger?;
+      _aplicarEstado();
+    }
+  }
+
+  // Pasa los valores del widget a los inputs de la animación
+  void _aplicarEstado() {
+    _isChecking?.change(widget.mirandoCampo);
+    _isHandsUp?.change(widget.tapandoOjos);
+    _numLook?.change(((widget.mirada + 1) * 50).clamp(0, 100).toDouble());
+  }
+
+  @override
+  void didUpdateWidget(OsoLogin oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _aplicarEstado();
+    if (widget.exitos > oldWidget.exitos) {
+      _trigSuccess?.fire();
+    }
+    if (widget.fallos > oldWidget.fallos) {
+      _trigFail?.fire();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_tieneRive) {
-      // Animación de Rive (state machine "Login Machine" del oso clásico)
-      return const SizedBox(
+    final archivo = _archivoRive;
+    if (archivo != null) {
+      return SizedBox(
         height: 180,
-        child: RiveAnimation.asset(
-          'assets/rive/oso_login.riv',
+        child: RiveAnimation.direct(
+          archivo,
           fit: BoxFit.contain,
+          onInit: _onRiveInit,
         ),
       );
     }
-    return _OsoDibujado(
-      tapandoOjos: widget.tapandoOjos,
-      mirada: widget.mirada,
-    );
+    return _OsoDibujado(tapandoOjos: widget.tapandoOjos, mirada: widget.mirada);
   }
 }
 
@@ -100,16 +162,8 @@ class _OsoDibujado extends StatelessWidget {
         alignment: Alignment.center,
         children: [
           // Orejas
-          Positioned(
-            top: 8,
-            left: 62,
-            child: _oreja(),
-          ),
-          Positioned(
-            top: 8,
-            right: 62,
-            child: _oreja(),
-          ),
+          Positioned(top: 8, left: 62, child: _oreja()),
+          Positioned(top: 8, right: 62, child: _oreja()),
           // Cabeza
           Container(
             width: 130,
@@ -122,16 +176,8 @@ class _OsoDibujado extends StatelessWidget {
               alignment: Alignment.center,
               children: [
                 // Ojos
-                Positioned(
-                  top: 42,
-                  left: 28,
-                  child: _ojo(),
-                ),
-                Positioned(
-                  top: 42,
-                  right: 28,
-                  child: _ojo(),
-                ),
+                Positioned(top: 42, left: 28, child: _ojo()),
+                Positioned(top: 42, right: 28, child: _ojo()),
                 // Hocico
                 Positioned(
                   bottom: 22,
@@ -156,11 +202,7 @@ class _OsoDibujado extends StatelessWidget {
             duration: const Duration(milliseconds: 250),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                _pata(),
-                const SizedBox(width: 30),
-                _pata(),
-              ],
+              children: [_pata(), const SizedBox(width: 30), _pata()],
             ),
           ),
         ],

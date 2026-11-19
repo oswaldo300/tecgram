@@ -1,6 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:tecgram/models/usuario.dart';
+import 'package:tecgram/data/perfil_usuario.dart';
 import 'package:tecgram/screens/pantalla_chats.dart';
 import 'package:tecgram/screens/pantalla_verificacion.dart';
 import 'package:tecgram/theme/app_theme.dart';
@@ -8,6 +8,9 @@ import 'package:tecgram/utils/validadores.dart';
 import 'package:tecgram/widgets/logo_tecgram.dart';
 import 'package:tecgram/widgets/oso_login.dart';
 
+// Entrar con número de celular, como Telegram: se escribe el número y el
+// nombre, Firebase manda un SMS con un código y se verifica en la siguiente
+// pantalla. Si es la primera vez, la verificación crea la cuenta.
 class PantallaLogin extends StatefulWidget {
   const PantallaLogin({super.key});
 
@@ -25,22 +28,25 @@ class _PantallaLoginState extends State<PantallaLogin> {
 
   bool _isLoading = false;
   bool _navegando = false;
+  bool _mirandoCampo = false;
   double _mirada = 0;
+  int _fallos = 0;
 
   @override
   void initState() {
     super.initState();
 
     _focoTelefono.addListener(() {
-      if (_focoTelefono.hasFocus) {
-        setState(() => _mirada = -1);
-      }
+      if (!mounted) return;
+      setState(() => _mirandoCampo = _focoTelefono.hasFocus);
     });
 
     _focoNombre.addListener(() {
-      if (_focoNombre.hasFocus) {
-        setState(() => _mirada = 0);
-      }
+      if (!mounted) return;
+      setState(() {
+        _mirandoCampo = _focoNombre.hasFocus;
+        if (_focoNombre.hasFocus) _mirada = 0;
+      });
     });
   }
 
@@ -54,63 +60,76 @@ class _PantallaLoginState extends State<PantallaLogin> {
   }
 
   Future<void> _iniciarSesion() async {
-    if (!_formKey.currentState!.validate()) return;
+    FocusScope.of(context).unfocus();
+    setState(() => _mirandoCampo = false);
+
+    if (!_formKey.currentState!.validate()) {
+      setState(() => _fallos++);
+      return;
+    }
 
     setState(() {
       _isLoading = true;
       _navegando = false;
     });
 
-    FocusScope.of(context).unfocus();
-
-    final telefono = _telefonoController.text.replaceAll(
-      RegExp(r'\D'),
-      '',
-    );
-
+    final telefono = _telefonoController.text.replaceAll(RegExp(r'\D'), '');
     final nombre = _nombreController.text.trim();
     final telefonoCompleto = '+52$telefono';
 
     try {
-      await FirebaseAuth.instance.setLanguageCode('es');
-
       await FirebaseAuth.instance.verifyPhoneNumber(
         phoneNumber: telefonoCompleto,
         timeout: const Duration(seconds: 60),
 
+        // En algunos celulares el código se lee solo y entra directo.
         verificationCompleted: (PhoneAuthCredential credential) async {
           if (_navegando || !mounted) return;
-
           _navegando = true;
 
           try {
-            final resultado = await FirebaseAuth.instance
-                .signInWithCredential(credential);
+            final resultado = await FirebaseAuth.instance.signInWithCredential(
+              credential,
+            );
+            final usuarioFirebase = resultado.user;
+            if (usuarioFirebase == null) {
+              throw Exception('No se pudo obtener el usuario autenticado.');
+            }
 
-            await resultado.user?.updateDisplayName(nombre);
+            final usuario = await PerfilUsuario.guardarOCargar(
+              usuarioFirebase: usuarioFirebase,
+              nombre: nombre,
+              telefono: telefonoCompleto,
+            );
 
             if (!mounted) return;
-
-            final usuario = Usuario.desdeNombre(nombre, telefono);
-
-            Navigator.pushReplacement(
+            Navigator.pushAndRemoveUntil(
               context,
               MaterialPageRoute(
                 builder: (_) => PantallaChats(usuario: usuario),
               ),
+              (route) => false,
             );
-          } on FirebaseAuthException catch (e) {
-            _mostrarError(e.message ?? 'No se pudo iniciar sesión.');
+          } catch (e) {
+            _navegando = false;
+            if (!mounted) return;
+            setState(() {
+              _isLoading = false;
+              _fallos++;
+            });
+            _mostrarMensaje('No se pudo iniciar sesión.', esError: true);
           }
         },
 
         verificationFailed: (FirebaseAuthException e) {
           if (!mounted) return;
-
-          setState(() => _isLoading = false);
+          _navegando = false;
+          setState(() {
+            _isLoading = false;
+            _fallos++;
+          });
 
           String mensaje;
-
           switch (e.code) {
             case 'invalid-phone-number':
               mensaje = 'El número de teléfono no es válido.';
@@ -119,18 +138,16 @@ class _PantallaLoginState extends State<PantallaLogin> {
               mensaje = 'Demasiados intentos. Inténtalo más tarde.';
               break;
             case 'quota-exceeded':
-              mensaje = 'Se alcanzÃ³ el lÃ­mite de SMS de Firebase.';
+              mensaje = 'Se alcanzó el límite de SMS de Firebase.';
               break;
             default:
               mensaje = e.message ?? 'No se pudo enviar el código.';
           }
-
-          _mostrarError(mensaje);
+          _mostrarMensaje(mensaje, esError: true);
         },
 
         codeSent: (String verificationId, int? resendToken) {
           if (!mounted || _navegando) return;
-
           _navegando = true;
           setState(() => _isLoading = false);
 
@@ -141,6 +158,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
                 verificationId: verificationId,
                 telefono: telefono,
                 nombre: nombre,
+                resendToken: resendToken,
               ),
             ),
           );
@@ -152,20 +170,34 @@ class _PantallaLoginState extends State<PantallaLogin> {
       );
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-
-      setState(() => _isLoading = false);
-      _mostrarError(e.message ?? 'Ocurrió un error de autenticaciÃ³n.');
+      _navegando = false;
+      setState(() {
+        _isLoading = false;
+        _fallos++;
+      });
+      _mostrarMensaje(
+        e.message ?? 'Ocurrió un error de autenticación.',
+        esError: true,
+      );
     } catch (e) {
       if (!mounted) return;
-
-      setState(() => _isLoading = false);
-      _mostrarError('Ocurrió un error inesperado: $e');
+      _navegando = false;
+      setState(() {
+        _isLoading = false;
+        _fallos++;
+      });
+      _mostrarMensaje('Ocurrió un error inesperado: $e', esError: true);
     }
   }
 
-  void _mostrarError(String mensaje) {
+  void _mostrarMensaje(String texto, {required bool esError}) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(mensaje)),
+      SnackBar(
+        content: Text(texto),
+        backgroundColor: esError ? Colors.red.shade700 : Colors.green.shade700,
+      ),
     );
   }
 
@@ -174,10 +206,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 28,
-            vertical: 16,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 16),
           child: Form(
             key: _formKey,
             child: Column(
@@ -196,16 +225,15 @@ class _PantallaLoginState extends State<PantallaLogin> {
                 const Text(
                   'Mensajería del Instituto Tecnológico de Mérida',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: AppTheme.textoGris,
-                    fontSize: 13,
-                  ),
+                  style: TextStyle(color: AppTheme.textoGris, fontSize: 13),
                 ),
                 const SizedBox(height: 12),
 
                 OsoLogin(
                   tapandoOjos: false,
                   mirada: _mirada,
+                  mirandoCampo: _mirandoCampo,
+                  fallos: _fallos,
                 ),
 
                 const SizedBox(height: 20),
@@ -213,9 +241,14 @@ class _PantallaLoginState extends State<PantallaLogin> {
                 TextFormField(
                   controller: _telefonoController,
                   focusNode: _focoTelefono,
+                  enabled: !_isLoading,
                   keyboardType: TextInputType.phone,
+                  onChanged: (texto) {
+                    final vista = (texto.length * 2.0).clamp(0, 100);
+                    setState(() => _mirada = vista / 50 - 1);
+                  },
                   decoration: const InputDecoration(
-                    labelText: 'NÃºmero de teléfono',
+                    labelText: 'Número de teléfono',
                     hintText: '9991234567',
                     prefixText: '+52 ',
                     prefixIcon: Icon(Icons.phone_android),
@@ -229,6 +262,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
                 TextFormField(
                   controller: _nombreController,
                   focusNode: _focoNombre,
+                  enabled: !_isLoading,
                   textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
                     labelText: 'Tu nombre',
@@ -272,10 +306,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
                   'Recibirás un SMS para verificar tu número. '
                   'Pueden aplicarse tarifas de mensajes.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: AppTheme.textoGris,
-                  ),
+                  style: TextStyle(fontSize: 12, color: AppTheme.textoGris),
                 ),
               ],
             ),

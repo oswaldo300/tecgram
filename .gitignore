@@ -34,3 +34,11 @@ local.properties
 *.keystore
 google-services.json
 GoogleService-Info.plist
+
+# Documentación generada para agentes de IA (no va al repo)
+.agents/
+skills-lock.json
+
+# Logs del CLI de Firebase (no van al repo)
+firebase-debug.log
+firestore-debug.log
