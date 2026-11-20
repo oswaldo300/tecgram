@@ -7,7 +7,7 @@ void main() {
     await tester.pumpWidget(const TecGramApp());
 
     // Título y campos del login
-    expect(find.text('TecGram'), findsWidgets);
+    expect(find.text('TaroGram'), findsWidgets);
     expect(find.text('Número de teléfono'), findsOneWidget);
     expect(find.text('Tu nombre'), findsOneWidget);
     expect(find.text('ENVIAR CÓDIGO SMS'), findsOneWidget);

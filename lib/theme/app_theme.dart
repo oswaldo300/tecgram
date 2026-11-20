@@ -1,21 +1,22 @@
 import 'package:flutter/material.dart';
 
-// Colores y tema de TecGram.
-// La paleta toma el azul clásico de Telegram (#0088cc) y lo combina
-// con el azul institucional del Tecnológico de Mérida.
+// Colores y tema de TaroGram.
 class AppTheme {
   AppTheme._();
 
-  static const Color azulTelegram = Color(0xFF0088CC);
-  static const Color azulClaro = Color(0xFF54A9EB);
-  static const Color azulOscuro = Color(0xFF0B4F71);
+  static const Color azulTelegram = Color.fromARGB(255, 142, 34, 209);
+  static const Color azulClaro = Color(0xFFB56CE6);
+  static const Color azulOscuro = Color(0xFF5A1187);
   static const Color azulTec = Color(0xFF003B71);
 
-  // Fondo de la sala de chat (tono gris azulado, como el de Telegram)
-  static const Color fondoChat = Color(0xFFE7EBF0);
+  // Fondo general de la app (lavanda muy suave que combina con el morado Taro)
+  static const Color fondoApp = Color(0xFFF6F0FA);
 
-  // Burbujas: la mía en azul claro, la del otro en blanco
-  static const Color burbujaMia = Color(0xFFD6ECFA);
+  // Fondo de la sala de chat (tono lavanda grisáceo suave)
+  static const Color fondoChat = Color(0xFFEDE4F5);
+
+  // Burbujas: la mía en lila claro, la del otro en blanco
+  static const Color burbujaMia = Color(0xFFE3CCF5);
   static const Color burbujaOtro = Color(0xFFFFFFFF);
 
   static const Color textoGris = Color(0xFF707579);
@@ -25,8 +26,12 @@ class AppTheme {
     colorScheme: ColorScheme.fromSeed(
       seedColor: azulTelegram,
       primary: azulTelegram,
+      surface: fondoApp,
     ),
-    scaffoldBackgroundColor: Colors.white,
+    scaffoldBackgroundColor: fondoApp,
+    drawerTheme: const DrawerThemeData(
+      backgroundColor: fondoApp,
+    ),
     appBarTheme: const AppBarTheme(
       backgroundColor: azulTelegram,
       foregroundColor: Colors.white,

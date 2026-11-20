@@ -215,17 +215,12 @@ class _PantallaLoginState extends State<PantallaLogin> {
                 const LogoTecGram(tamano: 64),
                 const SizedBox(height: 4),
                 const Text(
-                  'TecGram',
+                  'TaroGram',
                   style: TextStyle(
                     fontSize: 32,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.azulTelegram,
+                    color: Color.fromARGB(255, 142, 34, 209),
                   ),
-                ),
-                const Text(
-                  'Mensajería del Instituto Tecnológico de Mérida',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: AppTheme.textoGris, fontSize: 13),
                 ),
                 const SizedBox(height: 12),
 
@@ -249,7 +244,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
                   },
                   decoration: const InputDecoration(
                     labelText: 'Número de teléfono',
-                    hintText: '9991234567',
+                    hintText: 'Ej. 9991234567',
                     prefixText: '+52 ',
                     prefixIcon: Icon(Icons.phone_android),
                     border: OutlineInputBorder(),
@@ -266,7 +261,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
                   textCapitalization: TextCapitalization.words,
                   decoration: const InputDecoration(
                     labelText: 'Tu nombre',
-                    hintText: 'Ana Pérez',
+                    hintText: 'Ej. Ana Pérez',
                     prefixIcon: Icon(Icons.person),
                     border: OutlineInputBorder(),
                   ),
@@ -281,7 +276,7 @@ class _PantallaLoginState extends State<PantallaLogin> {
                   child: ElevatedButton(
                     onPressed: _isLoading ? null : _iniciarSesion,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.azulTelegram,
+                      backgroundColor: Color.fromARGB(255, 142, 34, 209),
                       foregroundColor: Colors.white,
                     ),
                     child: _isLoading

@@ -1,8 +1,10 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:tecgram/data/datos_ejemplo.dart';
 import 'package:tecgram/models/chat.dart';
 import 'package:tecgram/models/usuario.dart';
 import 'package:tecgram/screens/pantalla_chat.dart';
+import 'package:tecgram/screens/pantalla_login.dart';
 import 'package:tecgram/theme/app_theme.dart';
 import 'package:tecgram/widgets/logo_tecgram.dart';
 import 'package:tecgram/widgets/tarjeta_chat.dart';
@@ -72,7 +74,7 @@ class _PantallaChatsState extends State<PantallaChats> {
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          'TecGram',
+          'TaroGram',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
         ),
         actions: [
@@ -110,7 +112,7 @@ class _PantallaChatsState extends State<PantallaChats> {
                 hintText: 'Buscar chats',
                 prefixIcon: const Icon(Icons.search),
                 filled: true,
-                fillColor: const Color(0xFFF0F2F5),
+                fillColor: const Color(0xFFEBE0F4),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(24),
                   borderSide: BorderSide.none,
@@ -148,6 +150,47 @@ class _PantallaChatsState extends State<PantallaChats> {
     );
   }
 
+  // Cierra la sesión en Firebase y regresa a la pantalla de inicio de sesión
+  Future<void> _cerrarSesion() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Cerrar sesión'),
+        content: const Text('¿Seguro que deseas cerrar tu sesión?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red.shade700),
+            child: const Text('Cerrar sesión'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    try {
+      await FirebaseAuth.instance.signOut();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No se pudo cerrar sesión: $e')),
+      );
+      return;
+    }
+
+    if (!mounted) return;
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const PantallaLogin()),
+      (route) => false,
+    );
+  }
+
   // Menú lateral estilo Telegram con los datos del usuario
   Widget _menuLateral() {
     return Drawer(
@@ -179,7 +222,7 @@ class _PantallaChatsState extends State<PantallaChats> {
                   Text(
                     widget.usuario.correo.isNotEmpty
                         ? widget.usuario.correo
-                        : '+52 ${widget.usuario.telefono}',
+                        : '${widget.usuario.telefono}',
                     style: const TextStyle(color: Colors.white70),
                   ),
                 ],
@@ -207,10 +250,25 @@ class _PantallaChatsState extends State<PantallaChats> {
               onTap: () => Navigator.pop(context),
             ),
             const Spacer(),
+            const Divider(),
+            ListTile(
+              leading: Icon(Icons.logout, color: Colors.red.shade700),
+              title: Text(
+                'Cerrar sesión',
+                style: TextStyle(
+                  color: Colors.red.shade700,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              onTap: () {
+                Navigator.pop(context);
+                _cerrarSesion();
+              },
+            ),
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text(
-                'TecGram v1.0.0\nInstituto Tecnológico de Mérida',
+                'TaroGram v1.0.0',
                 style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
               ),
             ),

@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "mx.edu.itmerida" "\0"
-            VALUE "FileDescription", "tecgram" "\0"
+            VALUE "FileDescription", "TaroGram" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
             VALUE "InternalName", "tecgram" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 mx.edu.itmerida. All rights reserved." "\0"
             VALUE "OriginalFilename", "tecgram.exe" "\0"
-            VALUE "ProductName", "tecgram" "\0"
+            VALUE "ProductName", "TaroGram" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

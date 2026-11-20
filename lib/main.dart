@@ -55,7 +55,7 @@ class TecGramApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'TecGram',
+      title: 'TaroGram',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.claro,
       home: const AuthGate(),
